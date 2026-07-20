@@ -1,0 +1,40 @@
+# ============================================================
+# Pollería la Infantería — Imagen para Render.com
+# Python 3.13 + R + Flask + MongoDB Atlas
+# ============================================================
+FROM python:3.13-slim
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV MONGO_URL=mongodb://localhost:27017
+
+# ─── Dependencias del sistema + R ───
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    r-base r-base-dev \
+    libcurl4-openssl-dev libssl-dev libxml2-dev \
+    libsodium-dev libsasl2-dev \
+    curl procps \
+    && rm -rf /var/lib/apt/lists/*
+
+# ─── Paquetes Python ───
+RUN pip install --no-cache-dir flask pymongo
+
+# ─── Paquetes R (sin Prophet, no compila en slim) ───
+RUN R -e "install.packages(c( \
+    'Rcpp', 'rlang', 'curl', 'openssl', 'jsonlite', \
+    'dplyr', 'readxl', 'ggplot2', 'lubridate', \
+    'mongolite', 'randomForest', 'arules', 'gridExtra' \
+  ), repos='https://cloud.r-project.org', Ncpus=2)"
+
+# ─── Copiar proyecto ───
+WORKDIR /app
+COPY . .
+
+# ─── Directorios necesarios ───
+RUN mkdir -p /app/data/raw /app/data/output /app/data/processed
+
+# ─── Entrypoint para Render ───
+COPY entrypoint-render.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+EXPOSE 5000
+CMD ["/entrypoint.sh"]

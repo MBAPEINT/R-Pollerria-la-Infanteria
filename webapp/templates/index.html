@@ -1,0 +1,1607 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pollería la Infantería — Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        :root {
+            --primary: #A3000E;
+            --primary-dark: #65000C;
+            --gold: #E29E1A;
+            --naranja: #E8781E;
+            --dark: #6E3418;
+            --card: #FFFFFF;
+            --bg: #faf8f5;
+            --text: #2c2722;
+            --muted: #8a8078;
+            --success: #27ae60;
+            --warning: #E29E1A;
+            --danger: #e74c3c;
+            --info: #3498db;
+            --purple: #9b59b6;
+            --sidebar-w: 240px;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); display: flex; min-height: 100vh; }
+        a { text-decoration: none; color: inherit; }
+
+        /* Sidebar */
+        .sidebar {
+            width: var(--sidebar-w); background: var(--dark); color: #ecf0f1;
+            padding: 0; position: fixed; top: 0; left: 0; bottom: 0;
+            display: flex; flex-direction: column; z-index: 1000; overflow-y: auto;
+        }
+        .sidebar .logo {
+            padding: 18px 18px; background: #faf8f5;
+            display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 700;
+            border-top: 2px solid var(--naranja);
+            border-bottom: 1px solid rgba(226,158,26,0.60);
+            color: var(--primary-dark);
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+        }
+        .sidebar .logo i { font-size: 30px; color: var(--naranja); }
+        .sidebar .nav { flex: 1; padding: 15px 0; }
+        .sidebar .nav a {
+            display: flex; align-items: center; gap: 12px; padding: 12px 20px;
+            color: #bdc3c7; transition: all .2s; font-size: 14px; border-left: 3px solid transparent;
+            width: 100%;
+        }
+        .sidebar .nav a:hover, .sidebar .nav a.active {
+            background: rgba(255,255,255,0.06); color: #fff; border-left-color: var(--naranja);
+        }
+        .sidebar .nav a i { font-size: 18px; width: 22px; text-align: center; }
+        /* CRUD links indentados bajo Gestión */
+        .sidebar .nav a.crud-link { padding-left: 34px; font-size: 13px; }
+
+        /* Main */
+        .main { margin-left: var(--sidebar-w); flex: 1; padding: 25px 30px; }
+        .page { display: none; }
+        .page.active { display: block; }
+
+        .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-bottom: 25px; }
+        .kpi-card {
+            background: var(--card); padding: 22px; border-radius: 12px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06); position: relative; overflow: hidden;
+        }
+        .kpi-card .icon { position: absolute; right: 18px; top: 18px; font-size: 30px; opacity: .15; }
+        .kpi-card .label { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); font-weight: 600; }
+        .kpi-card .value { font-size: 30px; font-weight: 700; margin: 4px 0; }
+        .kpi-card .sub { font-size: 12px; color: var(--muted); }
+        .kpi-card .badge-up { color: var(--success); font-weight: 600; }
+        .kpi-card .badge-down { color: var(--danger); font-weight: 600; }
+
+        .chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 25px; }
+        .chart-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; margin-bottom: 25px; }
+        .card {
+            background: var(--card); padding: 20px; border-radius: 12px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+        }
+        .card h3 { font-size: 16px; font-weight: 700; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
+        .card h3 i { color: var(--primary); }
+        .card canvas { max-height: 300px; }
+
+        .alert-list { max-height: 250px; overflow-y: auto; }
+        .alert-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 10px 0; border-bottom: 1px solid #eee; font-size: 14px;
+        }
+        .alert-item:last-child { border-bottom: none; }
+
+        .badge { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .badge-danger { background: #fde8e8; color: var(--danger); }
+        .badge-warning { background: #fef3cd; color: var(--warning); }
+        .badge-success { background: #d4edda; color: var(--success); }
+        .badge-info { background: #d6eaf8; color: var(--info); }
+        .badge-purple { background: #e8daef; color: var(--purple); }
+
+        .tag { display: inline-block; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; margin: 3px; }
+        .tag-red { background: #fde8e8; color: var(--danger); }
+        .tag-blue { background: #d6eaf8; color: var(--info); }
+        .tag-green { background: #d4edda; color: var(--success); }
+        .tag-yellow { background: #fef3cd; color: var(--warning); }
+        .tag-purple { background: #e8daef; color: var(--purple); }
+
+        .loader { text-align: center; padding: 40px; color: var(--muted); }
+        .loader i { font-size: 40px; animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        .empty-state { text-align: center; padding: 50px; color: var(--muted); }
+        .empty-state i { font-size: 50px; display: block; margin-bottom: 15px; }
+
+        .combo-card {
+            background: linear-gradient(135deg, #fff5f5, #fff);
+            border: 1px solid #fde8e8; border-radius: 10px; padding: 18px; margin-bottom: 12px;
+        }
+        .combo-card .combo-name { font-size: 18px; font-weight: 700; color: var(--text); }
+        .combo-card .combo-stats { margin-top: 8px; display: flex; gap: 20px; font-size: 13px; }
+
+        @media (max-width: 1200px) {
+            .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+            .chart-row, .chart-row-3 { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 768px) {
+            .sidebar { width: 60px; }
+            .sidebar .logo span, .sidebar .nav a span { display: none; }
+            .sidebar .logo { justify-content: center; }
+            .main { margin-left: 60px; padding: 15px; }
+        }
+
+        /* CRUD Styles */
+        .crud-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+        .crud-header h2 { margin: 0; font-size: 22px; font-weight: 700; }
+        .crud-search { position: relative; max-width: 350px; }
+        .crud-search input { padding-right: 40px; border-radius: 25px; padding-left: 18px; }
+        .crud-search i { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: var(--muted); }
+        .crud-table-wrapper { overflow-x: auto; }
+        .crud-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        .crud-table thead { background: #f8f9fa; }
+        .crud-table th { padding: 12px 15px; text-align: left; font-weight: 600; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #e9ecef; white-space: nowrap; }
+        .crud-table td { padding: 10px 15px; border-bottom: 1px solid #f0f0f0; white-space: nowrap; }
+        .crud-table tbody tr { cursor: pointer; transition: background .15s; }
+        .crud-table tbody tr:hover { background: #f8f9fa; }
+        .crud-pagination { display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 20px; }
+        .crud-pagination button { border: 1px solid #dee2e6; background: white; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; transition: all .15s; }
+        .crud-pagination button:hover:not(:disabled) { background: var(--primary); color: white; border-color: var(--primary); }
+        .crud-pagination button:disabled { opacity: .4; cursor: default; }
+        .crud-pagination .page-info { font-size: 13px; color: var(--muted); padding: 0 8px; }
+        .crud-actions { display: flex; gap: 6px; }
+        .crud-actions button { padding: 4px 10px; border-radius: 6px; border: 1px solid #dee2e6; background: white; cursor: pointer; font-size: 12px; transition: all .15s; }
+        .crud-actions .btn-edit:hover { background: var(--info); color: white; border-color: var(--info); }
+        .crud-actions .btn-del:hover { background: var(--danger); color: white; border-color: var(--danger); }
+        .crud-empty { text-align: center; padding: 50px; color: var(--muted); }
+
+        /* Sidebar separator */
+        .sidebar-separator {
+            padding: 20px 20px 8px 20px; font-size: 11px; text-transform: uppercase;
+            letter-spacing: 1.5px; color: var(--gold); font-weight: 600; opacity: 0.65;
+            border-left: 3px solid transparent; display: block; width: 100%;
+        }
+
+        /* Report tabs */
+        .nav-tabs .nav-link { color: var(--text); font-size: 14px; font-weight: 500; }
+        .nav-tabs .nav-link.active { color: var(--primary); font-weight: 700; }
+
+        /* Modal */
+        .modal-form-group { margin-bottom: 15px; }
+        .modal-form-group label { font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 4px; display: block; }
+    </style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<nav class="sidebar">
+    <div class="logo">
+        <img src="/static/img/logo.png" alt="Logo" style="height: 80px; width: 180px;">
+    </div>
+    <div class="nav">
+        <a href="#dashboard" class="active" data-page="dashboard">
+            <i class="bi bi-speedometer2"></i> <span>Dashboard</span>
+        </a>
+        <a href="#reportes" data-page="reportes">
+            <i class="bi bi-graph-up"></i> <span>Reportes</span>
+        </a>
+        <div class="sidebar-separator">Gestión</div>
+        <a href="#crud-clientes" data-page="crud-clientes" class="crud-link">
+            <i class="bi bi-people"></i> <span>Clientes</span>
+        </a>
+        <a href="#crud-productos" data-page="crud-productos" class="crud-link">
+            <i class="bi bi-box"></i> <span>Productos</span>
+        </a>
+        <a href="#crud-ventas" data-page="crud-ventas" class="crud-link">
+            <i class="bi bi-cash-stack"></i> <span>Ventas</span>
+        </a>
+        <a href="#crud-personal" data-page="crud-personal" class="crud-link">
+            <i class="bi bi-person-badge"></i> <span>Personal</span>
+        </a>
+        <a href="#crud-insumos" data-page="crud-insumos" class="crud-link">
+            <i class="bi bi-boxes"></i> <span>Insumos</span>
+        </a>
+        <a href="#crud-proveedores" data-page="crud-proveedores" class="crud-link">
+            <i class="bi bi-truck"></i> <span>Proveedores</span>
+        </a>
+        <a href="#crud-metodos-pago" data-page="crud-metodos-pago" class="crud-link">
+            <i class="bi bi-credit-card"></i> <span>Métodos Pago</span>
+        </a>
+        <a href="#crud-ordenes" data-page="crud-ordenes" class="crud-link">
+            <i class="bi bi-file-text"></i> <span>Órdenes Compra</span>
+        </a>
+        <a href="#ejecutar" data-page="ejecutar" style="margin-top:20px;border-top:1px solid rgba(255,255,255,0.1);padding-top:20px">
+            <i class="bi bi-rocket-takeoff"></i> <span>Ejecutar Predicciones</span>
+        </a>
+    </div>
+</nav>
+
+<!-- MAIN CONTENT -->
+<div class="main">
+
+    <!-- ═══════════ DASHBOARD (BIENVENIDA) ═══════════ -->
+    <div id="page-dashboard" class="page active">
+        <div class="loader" id="loader-kpi"><i class="bi bi-arrow-repeat"></i><br>Cargando KPIs...</div>
+        <div id="content-kpi" style="display:none">
+            <div class="kpi-grid">
+                <div class="kpi-card">
+                    <div class="icon"><i class="bi bi-cash-stack"></i></div>
+                    <div class="label">Ventas último día</div>
+                    <div class="value" id="kpi-total-hoy">—</div>
+                    <div class="sub" id="kpi-var"></div>
+                </div>
+                <div class="kpi-card">
+                    <div class="icon"><i class="bi bi-receipt"></i></div>
+                    <div class="label">Ticket promedio (semana)</div>
+                    <div class="value" id="kpi-ticket">—</div>
+                    <div class="sub" id="kpi-ventas-hoy"></div>
+                </div>
+                <div class="kpi-card">
+                    <div class="icon"><i class="bi bi-people-fill"></i></div>
+                    <div class="label">Clientes activos (30d)</div>
+                    <div class="value" id="kpi-clientes">—</div>
+                    <div class="sub">de 9,001 registrados</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="icon"><i class="bi bi-exclamation-triangle"></i></div>
+                    <div class="label">Insumos bajo mínimo</div>
+                    <div class="value" id="kpi-insumos">—</div>
+                    <div class="sub" id="kpi-insumos-detalle"></div>
+                </div>
+            </div>
+
+            <div class="chart-row">
+                <div class="card">
+                    <h3><i class="bi bi-bar-chart"></i> Ventas últimos 7 días</h3>
+                    <canvas id="chart-ventas-semana"></canvas>
+                </div>
+                <div class="card">
+                    <h3><i class="bi bi-pie-chart"></i> Métodos de pago — Semana</h3>
+                    <canvas id="chart-pagos"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-row">
+                <div class="card">
+                    <h3><i class="bi bi-graph-up-arrow"></i> Evolución mensual — Último año</h3>
+                    <canvas id="chart-evolucion"></canvas>
+                </div>
+                <div class="card">
+                    <h3><i class="bi bi-trophy"></i> Top 10 productos — Esta semana</h3>
+                    <canvas id="chart-top"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════ REPORTES (CONSOLIDADO CON TABS) ═══════════ -->
+    <div id="page-reportes" class="page">
+        <h2 style="margin-bottom:20px"><i class="bi bi-graph-up"></i> Reportes</h2>
+        <ul class="nav nav-tabs" id="reportesTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-ventas" type="button" role="tab">Predicción Ventas</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-stock" type="button" role="tab">Stock & Agotamiento</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-clientes" type="button" role="tab">Segmentación Clientes</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-combos" type="button" role="tab">Combos Productos</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-anomalias" type="button" role="tab">Anomalías</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-comparacion" type="button" role="tab" onclick="cargarComparacion()"><i class="bi bi-trophy"></i> Comparación Modelos</button>
+            </li>
+        </ul>
+        <div class="tab-content" style="margin-top:20px">
+            <!-- Tab: Predicción Ventas -->
+            <div class="tab-pane fade show active" id="tab-ventas" role="tabpanel">
+                <div class="loader" id="loader-pred"><i class="bi bi-arrow-repeat"></i><br>Cargando predicciones...</div>
+                <div id="content-pred" style="display:none">
+                    <div class="kpi-grid">
+                        <div class="kpi-card"><div class="label">Próxima semana</div><div class="value" id="pred-semana">—</div><div class="sub">ventas estimadas</div></div>
+                        <div class="kpi-card"><div class="label">Próximo mes</div><div class="value" id="pred-mes">—</div><div class="sub">ventas estimadas</div></div>
+                        <div class="kpi-card"><div class="label">Próximo año</div><div class="value" id="pred-anio">—</div><div class="sub">ventas estimadas</div></div>
+                        <div class="kpi-card"><div class="label">Modelo</div><div class="value" style="font-size:22px">Prophet</div><div class="sub">Facebook Meta</div></div>
+                    </div>
+                    <div class="chart-row">
+                        <div class="card"><h3><i class="bi bi-calendar-week"></i> Predicción — Próxima semana</h3><canvas id="chart-pred-semana"></canvas></div>
+                        <div class="card"><h3><i class="bi bi-calendar-month"></i> Predicción — Próximos 12 meses</h3><canvas id="chart-pred-mes"></canvas></div>
+                    </div>
+                </div>
+            </div>
+            <!-- Tab: Stock -->
+            <div class="tab-pane fade" id="tab-stock" role="tabpanel">
+                <div class="loader" id="loader-stock"><i class="bi bi-arrow-repeat"></i><br>Cargando datos de stock...</div>
+                <div id="content-stock" style="display:none">
+                    <div class="chart-row">
+                        <div class="card"><h3><i class="bi bi-exclamation-diamond"></i> Riesgo de agotamiento</h3><canvas id="chart-agotamiento"></canvas></div>
+                        <div class="card"><h3><i class="bi bi-list-ul"></i> Detalle por insumo</h3><div class="alert-list" id="lista-agotamiento"></div></div>
+                    </div>
+                </div>
+            </div>
+            <!-- Tab: Segmentación -->
+            <div class="tab-pane fade" id="tab-clientes" role="tabpanel">
+                <div class="loader" id="loader-seg"><i class="bi bi-arrow-repeat"></i><br>Cargando segmentación...</div>
+                <div id="content-seg" style="display:none">
+                    <div class="kpi-grid" id="seg-kpis"></div>
+                    <div class="chart-row">
+                        <div class="card"><h3><i class="bi bi-pie-chart"></i> Distribución de segmentos</h3><canvas id="chart-segmentos"></canvas></div>
+                        <div class="card"><h3><i class="bi bi-lightbulb"></i> Estrategia por segmento</h3><div id="estrategias"></div></div>
+                    </div>
+                </div>
+            </div>
+            <!-- Tab: Combos -->
+            <div class="tab-pane fade" id="tab-combos" role="tabpanel">
+                <div class="loader" id="loader-combos"><i class="bi bi-arrow-repeat"></i><br>Descubriendo combos...</div>
+                <div id="content-combos" style="display:none">
+                    <h3 style="margin-bottom:20px"><i class="bi bi-basket"></i> Productos que se compran juntos</h3>
+                    <div id="lista-combos"></div>
+                </div>
+            </div>
+            <!-- Tab: Anomalías -->
+            <div class="tab-pane fade" id="tab-anomalias" role="tabpanel">
+                <div class="loader" id="loader-anom"><i class="bi bi-arrow-repeat"></i><br>Buscando anomalías...</div>
+                <div id="content-anom" style="display:none">
+                    <div class="kpi-grid">
+                        <div class="kpi-card"><div class="label">Anomalías detectadas</div><div class="value" id="anom-total">—</div><div class="sub" id="anom-pct"></div></div>
+                    </div>
+                    <div class="card"><h3><i class="bi bi-exclamation-triangle"></i> Muestra de ventas anómalas</h3><div class="alert-list" id="lista-anomalias"></div></div>
+                </div>
+            </div>
+            <!-- Tab: Comparación Modelos -->
+            <div class="tab-pane fade" id="tab-comparacion" role="tabpanel">
+                <div class="loader" id="loader-comp"><i class="bi bi-arrow-repeat"></i><br>Cargando comparación de modelos...</div>
+                <div id="content-comp" style="display:none">
+                    <h3 style="margin-bottom:20px"><i class="bi bi-trophy"></i> Comparación Multi-Modelo — Resumen de Ganadores</h3>
+                    <div class="card" style="margin-bottom:20px">
+                        <div class="table-responsive">
+                            <table class="table table-hover" id="tabla-ganadores" style="margin:0">
+                                <thead style="background:var(--primary);color:white">
+                                    <tr>
+                                        <th>Predicción</th><th>Modelo 1</th><th>Score</th>
+                                        <th>Modelo 2</th><th>Score</th><th>Modelo 3</th><th>Score</th>
+                                        <th style="background:var(--gold);color:#000">🏆 Ganador</th><th>Métrica Clave</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="chart-row">
+                        <div class="card"><h3><i class="bi bi-graph-up-arrow"></i> Ventas: Prophet vs ARIMA vs XGBoost</h3><canvas id="chart-comp-ventas"></canvas></div>
+                        <div class="card"><h3><i class="bi bi-people"></i> Segmentación: K-Means vs DBSCAN vs GMM</h3><canvas id="chart-comp-segmentacion"></canvas></div>
+                    </div>
+                    <div class="chart-row">
+                        <div class="card"><h3><i class="bi bi-basket"></i> Combos: Apriori vs FP-Growth vs Eclat</h3><canvas id="chart-comp-combos"></canvas></div>
+                        <div class="card"><h3><i class="bi bi-box-seam"></i> Agotamiento: RF vs XGBoost vs RegLog</h3><canvas id="chart-comp-agotamiento"></canvas></div>
+                    </div>
+                    <div class="chart-row">
+                        <div class="card"><h3><i class="bi bi-shield-exclamation"></i> Anomalías: IsolationForest vs LOF vs OneClassSVM</h3><canvas id="chart-comp-anomalias"></canvas></div>
+                        <div class="card"><h3><i class="bi bi-grid-3x3-gap"></i> Heatmap de Scores</h3><div id="heatmap-scores" style="padding:15px"></div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════ PÁGINAS CRUD (contenedores vacíos) ═══════════ -->
+    <div id="page-crud-clientes" class="page"><div id="crud-clientes"></div></div>
+    <div id="page-crud-productos" class="page"><div id="crud-productos"></div></div>
+    <div id="page-crud-ventas" class="page"><div id="crud-ventas"></div></div>
+    <div id="page-crud-personal" class="page"><div id="crud-personal"></div></div>
+    <div id="page-crud-insumos" class="page"><div id="crud-insumos"></div></div>
+    <div id="page-crud-proveedores" class="page"><div id="crud-proveedores"></div></div>
+    <div id="page-crud-metodos-pago" class="page"><div id="crud-metodos-pago"></div></div>
+    <div id="page-crud-ordenes" class="page"><div id="crud-ordenes-compra"></div></div>
+
+    <!-- ═══════════ EJECUTAR PREDICCIONES ═══════════ -->
+    <div id="page-ejecutar" class="page">
+        <div style="max-width:700px;margin:0 auto">
+            <div class="card" style="margin-bottom:20px;text-align:center" id="card-iniciar">
+                <h3><i class="bi bi-rocket-takeoff"></i> Ejecutar Predicciones y Reportes</h3>
+                <p style="color:var(--muted);font-size:14px;margin-bottom:15px">
+                    Ejecuta los 8 scripts de Machine Learning y proyectos directamente desde MongoDB.
+                    <br>Tarda aproximadamente <b>2 a 4 minutos</b>.
+                </p>
+                <button id="btn-ejecutar" onclick="ejecutarPredicciones()"
+                        style="background:var(--primary);color:white;border:none;padding:14px 40px;
+                               border-radius:30px;font-size:16px;font-weight:700;cursor:pointer;
+                               transition:all .3s"
+                        onmouseover="this.style.transform='scale(1.05)'"
+                        onmouseout="this.style.transform='scale(1)'">
+                    <i class="bi bi-play-fill"></i> Ejecutar Predicciones
+                </button>
+            </div>
+
+            <div class="card" style="margin-bottom:20px;display:none" id="card-progreso">
+                <h3><i class="bi bi-hourglass-split"></i> Progreso</h3>
+                <div style="background:#e9ecef;border-radius:20px;height:30px;overflow:hidden;margin:15px 0">
+                    <div id="barra-progreso"
+                         style="background:linear-gradient(90deg,var(--info),var(--success));
+                                height:100%;width:0%;border-radius:20px;transition:width .5s;
+                                display:flex;align-items:center;justify-content:center;
+                                color:white;font-weight:700;font-size:14px"></div>
+                </div>
+                <div style="display:flex;align-items:center;gap:12px;padding:10px;background:#f8f9fa;border-radius:8px">
+                    <i class="bi bi-hourglass-split" id="icono-paso" style="font-size:22px;color:var(--info)"></i>
+                    <span id="texto-paso" style="font-size:15px;font-weight:500">Preparando...</span>
+                </div>
+            </div>
+
+            <div class="card" style="margin-bottom:20px;display:none;text-align:center" id="card-finalizado">
+                <i class="bi bi-check-circle-fill" style="font-size:64px;color:#27ae60;display:block;margin-bottom:10px"></i>
+                <h3>¡Predicciones actualizadas!</h3>
+                <p style="color:var(--muted);margin:10px 0">Los reportes han sido actualizados con los datos más recientes de MongoDB.</p>
+                <button onclick="location.reload()"
+                        style="background:var(--success);color:white;border:none;padding:14px 40px;
+                               border-radius:30px;font-size:16px;font-weight:700;cursor:pointer;margin-top:15px">
+                    <i class="bi bi-arrow-repeat"></i> Refrescar Dashboard
+                </button>
+            </div>
+
+            <div class="card" style="margin-bottom:20px;display:none;text-align:center;border:2px solid var(--danger)" id="card-error">
+                <i class="bi bi-exclamation-triangle-fill" style="font-size:48px;color:var(--danger);display:block;margin-bottom:10px"></i>
+                <h3 style="color:var(--danger)">Error en la ejecución</h3>
+                <p style="color:var(--muted);margin:10px 0" id="texto-error"></p>
+                <button onclick="location.reload()"
+                        style="background:var(--danger);color:white;border:none;padding:10px 30px;
+                               border-radius:20px;font-weight:600;cursor:pointer;margin-top:10px">
+                    <i class="bi bi-arrow-clockwise"></i> Reiniciar
+                </button>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- ═══════════ MODAL DE ALERTA ═══════════ -->
+<div class="modal fade" id="alertModal" tabindex="-1">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center py-4">
+                <i id="alertModalIcon" style="font-size:48px;display:block;margin-bottom:12px"></i>
+                <p id="alertModalMsg" style="font-size:15px;margin:0"></p>
+            </div>
+            <div class="modal-footer justify-content-center border-0 pt-0">
+                <button class="btn btn-secondary" data-bs-dismiss="modal" id="alertModalBtn" style="min-width:100px;border-radius:20px">Aceptar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════ MODAL DE CONFIRMACIÓN ═══════════ -->
+<div class="modal fade" id="confirmModal" tabindex="-1">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center py-4">
+                <i class="bi bi-question-circle-fill" style="font-size:48px;color:var(--warning);display:block;margin-bottom:12px"></i>
+                <p id="confirmModalMsg" style="font-size:15px;margin:0"></p>
+            </div>
+            <div class="modal-footer justify-content-center border-0 pt-0">
+                <button class="btn btn-secondary" data-bs-dismiss="modal" id="confirmModalCancel" style="min-width:100px;border-radius:20px">Cancelar</button>
+                <button class="btn btn-danger" id="confirmModalOk" style="min-width:100px;border-radius:20px">Eliminar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// ═══════════════════════════════════════════════════════════
+// NAVEGACIÓN
+// ═══════════════════════════════════════════════════════════
+document.querySelectorAll('.sidebar .nav a').forEach(link => {
+    link.addEventListener('click', function(e) {
+        e.preventDefault();
+        document.querySelectorAll('.sidebar .nav a').forEach(l => l.classList.remove('active'));
+        this.classList.add('active');
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        const target = document.getElementById('page-' + this.dataset.page);
+        if (target) target.classList.add('active');
+        loadPage(this.dataset.page);
+    });
+});
+
+let loaded = {};
+function loadPage(page) {
+    if (loaded[page]) return;
+    loaded[page] = true;
+    switch(page) {
+        case 'dashboard': loadDashboard(); break;
+        case 'reportes': loadReportes(); break;
+        case 'crud-clientes': renderCrudPage(CRUD_CONFIGS.Clientes); break;
+        case 'crud-productos': renderCrudPage(CRUD_CONFIGS.Productos); break;
+        case 'crud-ventas': renderCrudPage(CRUD_CONFIGS.Ventas); break;
+        case 'crud-personal': renderCrudPage(CRUD_CONFIGS.Personal); break;
+        case 'crud-insumos': renderCrudPage(CRUD_CONFIGS.Insumos); break;
+        case 'crud-proveedores': renderCrudPage(CRUD_CONFIGS.Proveedores); break;
+        case 'crud-metodos-pago': renderCrudPage(CRUD_CONFIGS.Metodos_Pago); break;
+        case 'crud-ordenes': renderCrudPage(CRUD_CONFIGS.Ordenes_Compra); break;
+    }
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// CHART HELPERS
+// ═══════════════════════════════════════════════════════════
+const COLORS = ['#A3000E','#E8781E','#E29E1A','#3498db','#27ae60','#9b59b6','#1abc9c','#65000C'];
+
+function makeBar(ctx, labels, values, color = COLORS[1]) {
+    return new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{ data: values, backgroundColor: color, borderRadius: 6, borderSkipped: false }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, grid: { color: '#f0f0f0' } } }
+        }
+    });
+}
+
+function makeDoughnut(ctx, labels, values, colors = COLORS) {
+    return new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{ data: values, backgroundColor: colors, borderWidth: 2, borderColor: '#fff' }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { position: 'bottom', labels: { padding: 20, usePointStyle: true } } }
+        }
+    });
+}
+
+function makeLine(ctx, labels, values, color = COLORS[0]) {
+    return new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: values, borderColor: color, backgroundColor: color + '20',
+                fill: true, tension: 0.3, pointRadius: 3, pointBackgroundColor: color
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, grid: { color: '#f0f0f0' } } }
+        }
+    });
+}
+
+function makeHorizontalBar(ctx, labels, values, color = COLORS[2]) {
+    return new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{ data: values, backgroundColor: color, borderRadius: 6, borderSkipped: false }]
+        },
+        options: {
+            indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { x: { beginAtZero: true, grid: { color: '#f0f0f0' } } }
+        }
+    });
+}
+
+function fmt(n, dec = 0) { return Number(n).toLocaleString('es-PE', {minimumFractionDigits: dec, maximumFractionDigits: dec}); }
+function fmoney(n) { return 'S/ ' + fmt(n); }
+
+
+// ═══════════════════════════════════════════════════════════
+// MODALES DE ALERTA Y CONFIRMACIÓN (reemplazan alert/confirm)
+// ═══════════════════════════════════════════════════════════
+let alertModal, confirmModal, alertResolve = null, confirmResolve = null;
+
+function showAlert(msg, type = 'error') {
+    return new Promise((resolve) => {
+        if (!alertModal) alertModal = new bootstrap.Modal(document.getElementById('alertModal'));
+        const icon = document.getElementById('alertModalIcon');
+        const btn = document.getElementById('alertModalBtn');
+        if (type === 'success') {
+            icon.className = 'bi bi-check-circle-fill';
+            icon.style.color = 'var(--success)';
+            btn.className = 'btn btn-success';
+            btn.style.cssText = 'min-width:100px;border-radius:20px';
+        } else if (type === 'warning') {
+            icon.className = 'bi bi-exclamation-triangle-fill';
+            icon.style.color = 'var(--warning)';
+            btn.className = 'btn btn-warning';
+            btn.style.cssText = 'min-width:100px;border-radius:20px';
+        } else {
+            icon.className = 'bi bi-x-circle-fill';
+            icon.style.color = 'var(--danger)';
+            btn.className = 'btn btn-danger';
+            btn.style.cssText = 'min-width:100px;border-radius:20px';
+        }
+        document.getElementById('alertModalMsg').textContent = msg;
+        alertResolve = resolve;
+        alertModal.show();
+    });
+}
+
+document.getElementById('alertModal').addEventListener('hidden.bs.modal', () => {
+    if (alertResolve) { alertResolve(); alertResolve = null; }
+});
+
+function showConfirm(msg, okText = 'Eliminar') {
+    return new Promise((resolve) => {
+        if (!confirmModal) confirmModal = new bootstrap.Modal(document.getElementById('confirmModal'));
+        document.getElementById('confirmModalMsg').textContent = msg;
+        document.getElementById('confirmModalOk').textContent = okText;
+        confirmResolve = resolve;
+        confirmModal.show();
+    });
+}
+
+document.getElementById('confirmModalOk').addEventListener('click', () => {
+    if (confirmResolve) { confirmResolve(true); confirmResolve = null; }
+    if (confirmModal) confirmModal.hide();
+});
+document.getElementById('confirmModalCancel').addEventListener('click', () => {
+    if (confirmResolve) { confirmResolve(false); confirmResolve = null; }
+});
+document.getElementById('confirmModal').addEventListener('hidden.bs.modal', () => {
+    if (confirmResolve) { confirmResolve(false); confirmResolve = null; }
+});
+
+
+// ═══════════════════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════════════════
+async function loadDashboard() {
+    const resp = await fetch('/api/kpis');
+    const d = await resp.json();
+
+    document.getElementById('kpi-total-hoy').textContent = fmoney(d.total_hoy);
+    const varClass = d.variacion_diaria >= 0 ? 'badge-up' : 'badge-down';
+    const varSign = d.variacion_diaria >= 0 ? '▲' : '▼';
+    document.getElementById('kpi-var').innerHTML = `<span class="${varClass}">${varSign} ${Math.abs(d.variacion_diaria)}%</span> vs día anterior`;
+    document.getElementById('kpi-ticket').textContent = 'S/ ' + fmt(d.ticket_semana, 2);
+    document.getElementById('kpi-ventas-hoy').textContent = d.n_ventas_hoy + ' transacciones hoy';
+    document.getElementById('kpi-clientes').textContent = fmt(d.clientes_activos_30d);
+    document.getElementById('kpi-insumos').textContent = d.insumos_bajo;
+    document.getElementById('kpi-insumos-detalle').textContent = 'de ' + d.total_insumos + ' insumos totales';
+
+    const dias = d.ventas_diarias.map(v => v.fecha.slice(5));
+    const montos = d.ventas_diarias.map(v => v.total);
+    makeBar(document.getElementById('chart-ventas-semana'), dias, montos, COLORS[1]);
+
+    const mpLabels = Object.keys(d.metodos_pago);
+    const mpValues = Object.values(d.metodos_pago).map(v => v.pct);
+    makeDoughnut(document.getElementById('chart-pagos'), mpLabels, mpValues);
+
+    const respEv = await fetch('/api/evolucion_mensual');
+    const ev = await respEv.json();
+    makeLine(document.getElementById('chart-evolucion'), ev.map(e => e.mes.slice(2)), ev.map(e => e.total), COLORS[0]);
+
+    const respTop = await fetch('/api/top_productos');
+    const top = await respTop.json();
+    makeHorizontalBar(document.getElementById('chart-top'), top.map(t => t.producto).reverse(), top.map(t => t.cantidad).reverse(), COLORS[2]);
+
+    document.getElementById('loader-kpi').style.display = 'none';
+    document.getElementById('content-kpi').style.display = 'block';
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// REPORTES (tabs)
+// ═══════════════════════════════════════════════════════════
+let tabsLoaded = {};
+function loadReportes() {
+    // Cargar primer tab automáticamente
+    loadPrediccion();
+    tabsLoaded['ventas'] = true;
+
+    // Cargar tabs al hacer clic
+    document.querySelectorAll('#reportesTabs button').forEach(btn => {
+        btn.addEventListener('shown.bs.tab', function(e) {
+            const target = e.target.dataset.bsTarget;
+            if (target === '#tab-ventas' && !tabsLoaded['ventas']) { loadPrediccion(); tabsLoaded['ventas'] = true; }
+            if (target === '#tab-stock' && !tabsLoaded['stock']) { loadStock(); tabsLoaded['stock'] = true; }
+            if (target === '#tab-clientes' && !tabsLoaded['clientes']) { loadClientes(); tabsLoaded['clientes'] = true; }
+            if (target === '#tab-combos' && !tabsLoaded['combos']) { loadCombos(); tabsLoaded['combos'] = true; }
+            if (target === '#tab-anomalias' && !tabsLoaded['anomalias']) { loadAnomalias(); tabsLoaded['anomalias'] = true; }
+        });
+    });
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// PREDICCIÓN VENTAS
+// ═══════════════════════════════════════════════════════════
+async function loadPrediccion() {
+    const resp = await fetch('/api/prediccion_ventas');
+    const d = await resp.json();
+    if (d.error) {
+        document.getElementById('loader-pred').innerHTML = `<div class="empty-state"><i class="bi bi-exclamation-circle"></i>${d.error}</div>`;
+        return;
+    }
+    const totalSemana = d.proxima_semana.reduce((s, v) => s + v.ventas, 0);
+    const totalMes = d.resumen_semanal.reduce((s, v) => s + v.total, 0);
+    document.getElementById('pred-semana').textContent = fmoney(totalSemana);
+    document.getElementById('pred-mes').textContent = fmoney(totalMes);
+    document.getElementById('pred-anio').textContent = fmoney(d.total_anio);
+    makeBar(document.getElementById('chart-pred-semana'), d.proxima_semana.map(v => v.fecha.slice(5)), d.proxima_semana.map(v => v.ventas), COLORS[5]);
+    makeLine(document.getElementById('chart-pred-mes'), d.resumen_mensual.map(v => v.mes.slice(2)), d.resumen_mensual.map(v => v.total), COLORS[5]);
+    document.getElementById('loader-pred').style.display = 'none';
+    document.getElementById('content-pred').style.display = 'block';
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// STOCK
+// ═══════════════════════════════════════════════════════════
+async function loadStock() {
+    const resp = await fetch('/api/agotamiento');
+    const d = await resp.json();
+    if (d.error) {
+        document.getElementById('loader-stock').innerHTML = `<div class="empty-state"><i class="bi bi-exclamation-circle"></i>${d.error}</div>`;
+        return;
+    }
+    makeBar(document.getElementById('chart-agotamiento'), d.map(i => i.nombre).reverse(), d.map(i => i.probabilidad).reverse(), d.map(i => i.probabilidad >= 70 ? '#A3000E' : i.probabilidad >= 40 ? '#E29E1A' : '#27ae60'));
+    document.getElementById('lista-agotamiento').innerHTML = d.map(i => `
+        <div class="alert-item">
+            <div><b>${i.nombre}</b><br><small>Stock: ${i.stock} | Mín: ${i.minimo} | ${i.dias} días</small></div>
+            <span class="badge ${i.probabilidad >= 70 ? 'badge-danger' : i.probabilidad >= 40 ? 'badge-warning' : 'badge-success'}">${i.riesgo} (${i.probabilidad}%)</span>
+        </div>`).join('');
+    document.getElementById('loader-stock').style.display = 'none';
+    document.getElementById('content-stock').style.display = 'block';
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// SEGMENTACIÓN CLIENTES
+// ═══════════════════════════════════════════════════════════
+async function loadClientes() {
+    const resp = await fetch('/api/segmentacion');
+    const d = await resp.json();
+    if (d.error) {
+        document.getElementById('loader-seg').innerHTML = `<div class="empty-state"><i class="bi bi-exclamation-circle"></i>${d.error}</div>`;
+        return;
+    }
+    const colors = ['#A3000E','#E29E1A','#3498db','#27ae60','#9b59b6'];
+    const estrategias = {
+        'VIP': 'Programa premium, atención personalizada, eventos exclusivos',
+        'FRECUENTE': 'Upsell de combos, incentivar mayor ticket',
+        'OCASIONAL': 'Promociones para aumentar frecuencia de visita',
+        'NUEVO': 'Bienvenida + descuento 1ra compra + seguimiento',
+        'PERDIDO': 'Campaña de reconquista con descuento agresivo'
+    };
+    document.getElementById('seg-kpis').innerHTML = d.map((s, i) => `
+        <div class="kpi-card" style="border-top: 4px solid ${colors[i]}">
+            <div class="label">${s.nombre}</div>
+            <div class="value" style="font-size:22px">${fmt(s.clientes)}</div>
+            <div class="sub">${s.porcentaje}% | Gasto medio: ${fmoney(s.gasto_medio)} | ${s.frecuencia_media} visitas</div>
+        </div>`).join('');
+    makeDoughnut(document.getElementById('chart-segmentos'), d.map(s => s.nombre), d.map(s => s.clientes), colors);
+    document.getElementById('estrategias').innerHTML = d.map((s, i) => `
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #eee">
+            <span class="tag tag-${['red','blue','green','yellow','purple'][i] || 'blue'}">${s.nombre}</span>
+            <span style="font-size:14px">${estrategias[s.nombre] || 'Sin estrategia definida'}</span>
+        </div>`).join('');
+    document.getElementById('loader-seg').style.display = 'none';
+    document.getElementById('content-seg').style.display = 'block';
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// COMBOS
+// ═══════════════════════════════════════════════════════════
+async function loadCombos() {
+    const resp = await fetch('/api/combos');
+    const d = await resp.json();
+    if (d.error) {
+        document.getElementById('loader-combos').innerHTML = `<div class="empty-state"><i class="bi bi-exclamation-circle"></i>${d.error}</div>`;
+        return;
+    }
+    document.getElementById('lista-combos').innerHTML = d.map((c, i) => `
+        <div class="combo-card">
+            <div class="combo-name">🍗 COMBO #${i+1}: ${c.antecedente} + ${c.consecuente}</div>
+            <div class="combo-stats">
+                <span>📊 Soporte: <b>${c.soporte}%</b></span>
+                <span>🎯 Confianza: <b>${c.confianza}%</b></span>
+                <span>🚀 Lift: <b>${c.lift}x</b></span>
+            </div>
+        </div>`).join('');
+    document.getElementById('loader-combos').style.display = 'none';
+    document.getElementById('content-combos').style.display = 'block';
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// ANOMALÍAS
+// ═══════════════════════════════════════════════════════════
+async function loadAnomalias() {
+    const resp = await fetch('/api/anomalias');
+    const d = await resp.json();
+    if (d.error) {
+        document.getElementById('loader-anom').innerHTML = `<div class="empty-state"><i class="bi bi-exclamation-circle"></i>${d.error}</div>`;
+        return;
+    }
+    document.getElementById('anom-total').textContent = d.total_detectadas;
+    document.getElementById('anom-pct').textContent = d.porcentaje + '%';
+    document.getElementById('lista-anomalias').innerHTML = d.muestra.map(a => `
+        <div class="alert-item">
+            <div><b>Venta #${a.id}</b><br><small>${a.productos} productos</small></div>
+            <div style="text-align:right"><b>${fmoney(a.total)}</b><br>
+                <span class="badge ${a.score >= 3 ? 'badge-danger' : 'badge-warning'}">Score ${a.score}/5</span>
+            </div>
+        </div>`).join('');
+    document.getElementById('loader-anom').style.display = 'none';
+    document.getElementById('content-anom').style.display = 'block';
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// COMPARACIÓN DE MODELOS
+// ═══════════════════════════════════════════════════════════
+
+let comparacionCharts = {};
+
+function destroyComparacionCharts() {
+    Object.values(comparacionCharts).forEach(c => c.destroy());
+    comparacionCharts = {};
+}
+
+async function cargarComparacion() {
+    const loader = document.getElementById('loader-comp');
+    const content = document.getElementById('content-comp');
+    if (content.style.display === 'block') return; // Ya cargado
+    loader.style.display = 'block';
+    content.style.display = 'none';
+
+    try {
+        // Cargar resumen
+        const resumenResp = await fetch('/api/comparacion/resumen');
+        const resumen = await resumenResp.json();
+
+        if (resumen.error) {
+            loader.innerHTML = `<div class="empty-state"><i class="bi bi-exclamation-circle"></i>${resumen.error}<br><small style="color:var(--muted)">Ejecuta primero los scripts en src/ml/comparacion/ del 01 al 06</small></div>`;
+            return;
+        }
+
+        // Llenar tabla de ganadores
+        const tbody = document.querySelector('#tabla-ganadores tbody');
+        tbody.innerHTML = resumen.map(r => `
+            <tr>
+                <td><b>${r.prediccion}</b></td>
+                <td>${r.modelo_1} <span class="badge bg-secondary">${r.score_1}</span></td>
+                <td><span class="badge bg-secondary">${r.score_1}</span></td>
+                <td>${r.modelo_2}</td>
+                <td><span class="badge bg-secondary">${r.score_2}</span></td>
+                <td>${r.modelo_3}</td>
+                <td><span class="badge bg-secondary">${r.score_3}</span></td>
+                <td style="background:#fdf6e3"><b>🏆 ${r.ganador}</b></td>
+                <td><small>${r.metrica_clave}</small></td>
+            </tr>`).join('');
+
+        // Cargar datos de cada comparacion y renderizar graficos
+        await Promise.all([
+            cargarGraficoVentas(),
+            cargarGraficoSegmentacion(),
+            cargarGraficoCombos(),
+            cargarGraficoAgotamiento(),
+            cargarGraficoAnomalias()
+        ]);
+
+        // Heatmap de scores
+        renderHeatmap(resumen);
+
+        loader.style.display = 'none';
+        content.style.display = 'block';
+    } catch (e) {
+        loader.innerHTML = `<div class="empty-state"><i class="bi bi-exclamation-triangle"></i>Error al cargar: ${e.message}</div>`;
+    }
+}
+
+async function cargarGraficoVentas() {
+    const resp = await fetch('/api/comparacion/ventas');
+    const data = await resp.json();
+    if (data.error) return;
+
+    const ctx = document.getElementById('chart-comp-ventas').getContext('2d');
+    comparacionCharts.ventas = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: data.map(d => d.modelo),
+            datasets: [{
+                label: 'MAPE (%)',
+                data: data.map(d => d.mape),
+                backgroundColor: ['#A3000E', '#E29E1A', '#E8781E'],
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                title: { display: true, text: 'MAPE: menor es mejor' },
+                legend: { display: false }
+            },
+            scales: { y: { beginAtZero: true, title: { display: true, text: 'MAPE (%)' } } }
+        }
+    });
+}
+
+async function cargarGraficoSegmentacion() {
+    const resp = await fetch('/api/comparacion/segmentacion');
+    const data = await resp.json();
+    if (data.error) return;
+
+    const ctx = document.getElementById('chart-comp-segmentacion').getContext('2d');
+    comparacionCharts.segmentacion = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: data.map(d => d.modelo),
+            datasets: [{
+                label: 'Silhouette Score',
+                data: data.map(d => d.silhouette),
+                backgroundColor: ['#A3000E', '#E29E1A', '#E8781E'],
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                title: { display: true, text: 'Silhouette: mayor es mejor (>0.25 válido, >0.5 bueno)' },
+                legend: { display: false }
+            },
+            scales: { y: { beginAtZero: true, max: 1, title: { display: true, text: 'Silhouette Score' } } }
+        }
+    });
+}
+
+async function cargarGraficoCombos() {
+    const resp = await fetch('/api/comparacion/combos');
+    const data = await resp.json();
+    if (data.error) return;
+
+    const ctx = document.getElementById('chart-comp-combos').getContext('2d');
+    comparacionCharts.combos = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: data.map(d => d.modelo),
+            datasets: [
+                { label: 'Lift Máximo', data: data.map(d => d.lift_maximo), backgroundColor: '#A3000E', borderRadius: 4 },
+                { label: 'Reglas Útiles', data: data.map(d => d.n_reglas_utiles), backgroundColor: '#E29E1A', borderRadius: 4 }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                title: { display: true, text: 'Lift Máximo + Reglas Útiles (lift > 1.5)' }
+            },
+            scales: { y: { beginAtZero: true } }
+        }
+    });
+}
+
+async function cargarGraficoAgotamiento() {
+    const resp = await fetch('/api/comparacion/agotamiento');
+    const data = await resp.json();
+    if (data.error) return;
+
+    const ctx = document.getElementById('chart-comp-agotamiento').getContext('2d');
+    comparacionCharts.agotamiento = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: data.map(d => d.modelo),
+            datasets: [
+                { label: 'F1-Score', data: data.map(d => d.f1_test * 100), backgroundColor: '#A3000E', borderRadius: 4 },
+                { label: 'Recall', data: data.map(d => d.recall * 100), backgroundColor: '#E29E1A', borderRadius: 4 },
+                { label: 'Precision', data: data.map(d => d.precision * 100), backgroundColor: '#E8781E', borderRadius: 4 }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: { title: { display: true, text: 'Métricas de Clasificación (%)' } },
+            scales: { y: { beginAtZero: true, max: 100, title: { display: true, text: '%' } } }
+        }
+    });
+}
+
+async function cargarGraficoAnomalias() {
+    const resp = await fetch('/api/comparacion/anomalias');
+    const data = await resp.json();
+    if (data.error) return;
+
+    const ctx = document.getElementById('chart-comp-anomalias').getContext('2d');
+    comparacionCharts.anomalias = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: data.map(d => d.modelo),
+            datasets: [{
+                label: '% Anomalías Detectadas',
+                data: data.map(d => d.pct_anomalias),
+                backgroundColor: ['#A3000E', '#E29E1A', '#E8781E'],
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                title: { display: true, text: '% de Ventas Detectadas como Anómalas (referencia ~1%)' },
+                legend: { display: false }
+            },
+            scales: { y: { beginAtZero: true, title: { display: true, text: '%' } } }
+        }
+    });
+}
+
+function renderHeatmap(resumen) {
+    const modelos = [...new Set(resumen.flatMap(r => [r.modelo_1, r.modelo_2, r.modelo_3]))];
+    const predicciones = resumen.map(r => r.prediccion);
+
+    // Crear matriz de scores
+    let html = '<table class="table table-sm" style="margin:0"><thead><tr><th></th>';
+    predicciones.forEach(p => html += `<th style="font-size:11px">${p}</th>`);
+    html += '</tr></thead><tbody>';
+
+    modelos.forEach(m => {
+        html += `<tr><td style="font-size:12px"><b>${m}</b></td>`;
+        predicciones.forEach(p => {
+            const r = resumen.find(rr => rr.prediccion === p);
+            let score = 0, isGanador = false;
+            if (r.modelo_1 === m) { score = r.score_1; isGanador = r.ganador === m; }
+            else if (r.modelo_2 === m) { score = r.score_2; isGanador = r.ganador === m; }
+            else if (r.modelo_3 === m) { score = r.score_3; isGanador = r.ganador === m; }
+
+            const alpha = score > 0 ? score / 100 : 0;
+            const color = isGanador
+                ? `rgba(226,158,26,${0.5 + alpha * 0.5})`
+                : `rgba(163,0,14,${0.1 + alpha * 0.5})`;
+            const textColor = alpha > 0.5 ? 'white' : 'var(--text)';
+            html += `<td style="background:${color};color:${textColor};text-align:center;font-weight:600;font-size:13px">${score > 0 ? score + '%' : '—'}${isGanador ? ' 🏆' : ''}</td>`;
+        });
+        html += '</tr>';
+    });
+    html += '</tbody></table>';
+    document.getElementById('heatmap-scores').innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════════
+// MOTOR CRUD GENÉRICO
+// ═══════════════════════════════════════════════════════════
+
+const AUDIT_PATTERNS = /_(es_nulo_imputado|imputada|es_outlier|limpia|estandarizada|es_nulo)$/;
+
+const CRUD_CONFIGS = {
+    Clientes: {
+        collection: 'Clientes', label: 'Clientes', labelSingular: 'Cliente', icon: 'bi-people', pageSize: 10,
+        sortDefault: 'PrimerNombre', readOnly: true,
+        tableFields: ['PrimerNombre','ApellidoPaterno','Telefono','Correo'],
+        formFields: [
+            {key:'PrimerNombre', label:'Primer Nombre', type:'text', required:true},
+            {key:'SegundoNombre', label:'Segundo Nombre', type:'text'},
+            {key:'ApellidoPaterno', label:'Apellido Paterno', type:'text', required:true},
+            {key:'ApellidoMaterno', label:'Apellido Materno', type:'text'},
+            {key:'Telefono', label:'Teléfono', type:'text'},
+            {key:'Correo', label:'Correo', type:'email'},
+        ]
+    },
+    Productos: {
+        collection: 'Productos', label: 'Productos', labelSingular: 'Producto', icon: 'bi-box', pageSize: 10,
+        sortDefault: 'NombreProducto',
+        tableFields: ['NombreProducto','Categoria','Precio'],
+        formFields: [
+            {key:'NombreProducto', label:'Nombre', type:'text', required:true},
+            {key:'Descripcion', label:'Descripción', type:'textarea'},
+            {key:'Precio', label:'Precio (S/)', type:'number', required:true},
+            {key:'Categoria', label:'Categoría', type:'select', options:['PLATOS_PRINCIPALES','ACOMPAÑAMIENTOS','BEBIDAS','OTROS']},
+        ],
+        // Insumos que consume este producto (se agregan dinámicamente con botón)
+        hasInsumos: true
+    },
+    Ventas: {
+        collection: 'Ventas', label: 'Ventas', labelSingular: 'Venta', icon: 'bi-cash-stack', pageSize: 10,
+        sortDefault: 'FechaVenta', sortOrder: -1, noEdit: true, noDelete: true,
+        tableFields: ['Cliente','Total','MetodoPago','FechaVenta'],
+        formFields: [
+            {key:'Cliente', label:'Cliente', type:'text', required:true},
+            {key:'Total', label:'Total (S/)', type:'number', required:true},
+            {key:'MetodoPago', label:'Método de Pago', type:'select', options:['Efectivo','Tarjeta','Yape','Plin','Transferencia']},
+            {key:'FechaVenta', label:'Fecha de Venta', type:'date'},
+            {key:'TipoComprobante', label:'Tipo Comprobante', type:'select', options:['Boleta','Factura']},
+            {key:'Personal', label:'Personal', type:'text'},
+            {key:'Subtotal', label:'Subtotal', type:'number'},
+        ],
+        dateFields: ['FechaVenta']
+    },
+    Personal: {
+        collection: 'Personal', label: 'Personal', labelSingular: 'Empleado', icon: 'bi-person-badge', pageSize: 10,
+        sortDefault: 'PrimerNombre',
+        tableFields: ['PrimerNombre','ApellidoPaterno','Rol','Telefono'],
+        formFields: [
+            {key:'PrimerNombre', label:'Primer Nombre', type:'text', required:true},
+            {key:'SegundoNombre', label:'Segundo Nombre', type:'text'},
+            {key:'ApellidoPaterno', label:'Apellido Paterno', type:'text', required:true},
+            {key:'ApellidoMaterno', label:'Apellido Materno', type:'text'},
+            {key:'DNI', label:'DNI', type:'text'},
+            {key:'Telefono', label:'Teléfono', type:'text'},
+            {key:'Correo', label:'Correo', type:'email'},
+            {key:'Rol', label:'Rol', type:'select', options:['Cocina','Atención','Delivery','Administración','Limpieza']},
+            {key:'FechaIngreso', label:'Fecha de Ingreso', type:'date'},
+        ],
+        dateFields: ['FechaIngreso']
+    },
+    Insumos: {
+        collection: 'Insumos', label: 'Insumos', labelSingular: 'Insumo', icon: 'bi-boxes', pageSize: 10,
+        sortDefault: 'Nombre',
+        tableFields: ['Nombre','StockActual','StockMinimo','StockMaximo','UnidadMedida'],
+        formFields: [
+            {key:'Nombre', label:'Nombre', type:'text', required:true},
+            {key:'StockActual', label:'Stock Actual', type:'number', required:true},
+            {key:'StockMinimo', label:'Stock Mínimo', type:'number', required:true},
+            {key:'StockMaximo', label:'Stock Máximo', type:'number', required:true},
+            {key:'UnidadMedida', label:'Unidad de Medida', type:'select', options:['Unidad','Kg','Litro','Gramo','Mililitro','Paquete']},
+        ]
+    },
+    Proveedores: {
+        collection: 'Proveedores', label: 'Proveedores', labelSingular: 'Proveedor', icon: 'bi-truck', pageSize: 10,
+        sortDefault: 'Nombre',
+        tableFields: ['Nombre','RUC','Telefono','Direccion'],
+        formFields: [
+            {key:'Nombre', label:'Nombre/Razón Social', type:'text', required:true},
+            {key:'RUC', label:'RUC', type:'text'},
+            {key:'Telefono', label:'Teléfono', type:'text'},
+            {key:'Direccion', label:'Dirección', type:'text'},
+        ]
+    },
+    Metodos_Pago: {
+        collection: 'Metodos_Pago', label: 'Métodos de Pago', labelSingular: 'Método', icon: 'bi-credit-card', pageSize: 10,
+        sortDefault: 'Tipo', readOnly: true,
+        tableFields: ['Tipo'],
+        formFields: [
+            {key:'Tipo', label:'Nombre del Método', type:'text', required:true},
+        ]
+    },
+    Ordenes_Compra: {
+        collection: 'Ordenes_Compra', label: 'Órdenes de Compra', labelSingular: 'Orden', icon: 'bi-file-text', pageSize: 10,
+        sortDefault: 'FechaPedido', sortOrder: -1, statusOnly: true,
+        tableFields: ['Proveedor','CostoTotal','Estado','FechaPedido'],
+        formFields: [
+            {key:'Proveedor', label:'Proveedor', type:'text', required:true},
+            {key:'Personal', label:'Personal', type:'text'},
+            {key:'CostoTotal', label:'Costo Total (S/)', type:'number', required:true},
+            {key:'Estado', label:'Estado', type:'select', options:['Pendiente','En tránsito','Completada','Cancelada','Entregado']},
+            {key:'FechaPedido', label:'Fecha de Pedido', type:'date'},
+            {key:'FechaEntrega', label:'Fecha de Entrega', type:'date'},
+        ],
+        dateFields: ['FechaPedido','FechaEntrega']
+    }
+};
+
+// Instancias de Chart por página CRUD para destruir al cambiar
+let currentCrudChart = null;
+
+async function renderCrudPage(config) {
+    const containerId = 'crud-' + config.collection.toLowerCase().replace(/_/g, '-');
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    if (container.dataset.rendered === 'true') return;
+
+    container.innerHTML = `
+        <div class="crud-header">
+            <h2><i class="bi ${config.icon || 'bi-table'}"></i> ${config.label}</h2>
+            <div class="crud-search">
+                <input type="text" class="form-control" id="${containerId}-search" placeholder="Buscar...">
+                <i class="bi bi-search"></i>
+            </div>
+        </div>
+        <div class="card">
+            <div class="crud-table-wrapper">
+                <table class="crud-table" id="${containerId}-table"><thead></thead><tbody></tbody></table>
+                <div class="crud-empty" id="${containerId}-empty" style="display:none">No se encontraron registros.</div>
+            </div>
+            <div class="crud-pagination" id="${containerId}-pagination"></div>
+        </div>
+
+        <!-- Modal Create/Edit -->
+        <div class="modal fade" id="${containerId}-modal" tabindex="-1">
+            <div class="modal-dialog modal-lg"><div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="${containerId}-modal-title"></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="${containerId}-modal-body"></div>
+                <div class="modal-footer">
+                    <button class="btn btn-danger" id="${containerId}-btn-delete" style="display:none;margin-right:auto">
+                        <i class="bi bi-trash"></i> Eliminar
+                    </button>
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button class="btn btn-primary" id="${containerId}-btn-save"><i class="bi bi-check-lg"></i> Guardar</button>
+                </div>
+            </div></div>
+        </div>
+    `;
+    container.dataset.rendered = 'true';
+
+    // Estado
+    let state = { page: 1, search: '', editingId: null, total: 0, totalPages: 1 };
+
+    // Referencias
+    const table = document.getElementById(containerId + '-table');
+    const empty = document.getElementById(containerId + '-empty');
+    const pagination = document.getElementById(containerId + '-pagination');
+    const searchInput = document.getElementById(containerId + '-search');
+    const modal = new bootstrap.Modal(document.getElementById(containerId + '-modal'));
+    const modalTitle = document.getElementById(containerId + '-modal-title');
+    const modalBody = document.getElementById(containerId + '-modal-body');
+    const btnSave = document.getElementById(containerId + '-btn-save');
+    const btnDelete = document.getElementById(containerId + '-btn-delete');
+
+    async function loadData() {
+        let url = `/api/crud/${config.collection}?page=${state.page}&per_page=${config.pageSize || 25}&sort=${config.sortDefault || '_id'}&order=${config.sortOrder || 1}`;
+        if (state.search) url += '&search=' + encodeURIComponent(state.search);
+
+        const resp = await fetch(url);
+        const d = await resp.json();
+        state.total = d.total;
+        state.totalPages = d.total_pages;
+
+        // Render tabla
+        const fields = config.tableFields || config.formFields.map(f => f.key);
+        const showActions = !config.readOnly;
+        const isStatusOnly = config.statusOnly || false;
+        const canEdit = !config.noEdit && !config.readOnly;
+        const canDelete = !config.noDelete && !config.readOnly;
+        table.querySelector('thead').innerHTML = '<tr>' + fields.map(f => {
+            const fd = config.formFields.find(ff => ff.key === f);
+            return `<th>${fd ? fd.label : f}</th>`;
+        }).join('') + ((showActions || canEdit || canDelete || isStatusOnly) ? '<th style="width:80px"></th>' : '') + '</tr>';
+
+        if (d.data.length === 0) {
+            table.querySelector('tbody').innerHTML = '';
+            empty.style.display = 'block';
+        } else {
+            empty.style.display = 'none';
+            table.querySelector('tbody').innerHTML = d.data.map(doc => {
+                const cells = fields.map(f => {
+                    let val = doc[f] !== undefined ? doc[f] : '';
+                    if (val === null || val === undefined) val = '';
+                    else if (f === 'Total' || f === 'Precio' || f === 'CostoTotal' || f === 'Subtotal') val = fmoney(Number(val));
+                    else if (f === 'FechaVenta' || f === 'FechaPedido' || f === 'FechaEntrega' || f === 'FechaIngreso') {
+                        if (typeof val === 'string' && val.includes('T')) val = val.split('T')[0];
+                    }
+                    else if (f === 'Telefono' || f === 'DNI' || f === 'RUC') val = String(val).replace(/\.0$/, '');
+                    // Colorear estado en Órdenes
+                    if (f === 'Estado') {
+                        const colorMap = {'Completada':'badge-success','Entregado':'badge-success','Pendiente':'badge-warning','En tránsito':'badge-info','Cancelada':'badge-danger'};
+                        val = `<span class="badge ${colorMap[val] || 'badge-info'}">${val}</span>`;
+                    }
+                    return `<td>${val}</td>`;
+                }).join('');
+                let actionsHtml = '';
+                if (isStatusOnly) {
+                    actionsHtml = `<td><div class="crud-actions"><button class="btn-edit" data-id="${doc._id}" title="Cambiar Estado"><i class="bi bi-arrow-repeat"></i></button></div></td>`;
+                } else if (canEdit || canDelete) {
+                    actionsHtml = '<td><div class="crud-actions">';
+                    if (canEdit) actionsHtml += `<button class="btn-edit" data-id="${doc._id}" title="Editar"><i class="bi bi-pencil"></i></button>`;
+                    if (canDelete) actionsHtml += `<button class="btn-del" data-id="${doc._id}" title="Eliminar"><i class="bi bi-trash"></i></button>`;
+                    actionsHtml += '</div></td>';
+                } else if (showActions) {
+                    // Ventas: mostrar botón de ver detalle aunque no se pueda editar/borrar
+                    actionsHtml = '';
+                }
+                return `<tr data-id="${doc._id}">${cells}${actionsHtml}</tr>`;
+            }).join('');
+
+            // Bindear eventos según permisos
+            if (canEdit || isStatusOnly) {
+                table.querySelectorAll('.btn-edit').forEach(btn => btn.onclick = (e) => { e.stopPropagation(); openEdit(btn.dataset.id); });
+                table.querySelectorAll('tbody tr').forEach(row => row.onclick = () => openEdit(row.dataset.id));
+            }
+            if (canDelete) {
+                table.querySelectorAll('.btn-del').forEach(btn => btn.onclick = (e) => { e.stopPropagation(); confirmDelete(btn.dataset.id); });
+            }
+        }
+
+        // Paginación
+        pagination.innerHTML = `
+            <button ${state.page <= 1 ? 'disabled' : ''} onclick="void(0)">«</button>
+            <button ${state.page <= 1 ? 'disabled' : ''} onclick="void(0)">‹</button>
+            <span class="page-info">Pág ${state.page} de ${state.totalPages} (${state.total} registros)</span>
+            <button ${state.page >= state.totalPages ? 'disabled' : ''} onclick="void(0)">›</button>
+            <button ${state.page >= state.totalPages ? 'disabled' : ''} onclick="void(0)">»</button>
+        `;
+        const btns = pagination.querySelectorAll('button');
+        if (btns[0]) btns[0].onclick = () => { state.page = 1; loadData(); };
+        if (btns[1]) btns[1].onclick = () => { if (state.page > 1) { state.page--; loadData(); } };
+        if (btns[2]) btns[2].onclick = () => { if (state.page < state.totalPages) { state.page++; loadData(); } };
+        if (btns[3]) btns[3].onclick = () => { state.page = state.totalPages; loadData(); };
+    }
+
+    function buildForm(data = {}) {
+        let html = config.formFields.map(f => {
+            const val = data[f.key] !== undefined ? data[f.key] : '';
+            let input = '';
+            const valStr = typeof val === 'string' ? val.replace(/"/g, '&quot;') : val;
+            if (f.type === 'select') {
+                const opts = (f.options || []).map(o => `<option value="${o}" ${String(val) === o ? 'selected' : ''}>${o}</option>`).join('');
+                input = `<select class="form-select" id="field-${f.key}">${opts}</select>`;
+            } else if (f.type === 'textarea') {
+                input = `<textarea class="form-control" id="field-${f.key}" rows="3">${valStr}</textarea>`;
+            } else if (f.type === 'date') {
+                const dateVal = typeof val === 'string' && val.includes('T') ? val.split('T')[0] : (val || '');
+                input = `<input type="date" class="form-control" id="field-${f.key}" value="${dateVal}">`;
+            } else if (f.type === 'number') {
+                input = `<input type="number" class="form-control" id="field-${f.key}" value="${val}" step="0.01">`;
+            } else if (f.type === 'email') {
+                input = `<input type="email" class="form-control" id="field-${f.key}" value="${valStr}">`;
+            } else {
+                input = `<input type="text" class="form-control" id="field-${f.key}" value="${valStr}">`;
+            }
+            const req = f.required ? ' <span style="color:var(--danger)">*</span>' : '';
+            return `<div class="modal-form-group"><label for="field-${f.key}">${f.label}${req}</label>${input}</div>`;
+        }).join('');
+
+        // Insumos dinámicos para Productos
+        if (config.hasInsumos) {
+            html += '<hr><h6 style="margin-bottom:12px"><i class="bi bi-boxes"></i> Insumos que consume este producto</h6>';
+            html += '<div id="producto-insumos-rows"></div>';
+            html += `<button type="button" class="btn btn-sm btn-outline-secondary" id="btn-agregar-insumo" style="margin-top:8px;border-radius:20px">
+                <i class="bi bi-plus-circle"></i> Agregar insumo
+            </button>`;
+        }
+
+        return html;
+    }
+
+    let insumoCounter = 0;
+
+    function agregarFilaInsumo(nombre = '', cantidad = '') {
+        insumoCounter++;
+        const idx = insumoCounter;
+        const row = document.createElement('div');
+        row.className = 'row mb-2 align-items-end insumo-row';
+        row.id = 'insumo-row-' + idx;
+        row.innerHTML = `
+            <div class="col-6">
+                <input type="text" class="form-control form-control-sm insumo-nombre" value="${nombre.replace(/"/g, '&quot;')}" placeholder="Nombre del insumo (ej: Pollo entero)">
+            </div>
+            <div class="col-4">
+                <input type="number" class="form-control form-control-sm insumo-cantidad" value="${cantidad}" step="0.001" placeholder="Cantidad">
+            </div>
+            <div class="col-2">
+                <button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.insumo-row').remove()" title="Quitar insumo">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>`;
+        document.getElementById('producto-insumos-rows').appendChild(row);
+    }
+
+    async function openEdit(id) {
+        const resp = await fetch(`/api/crud/${config.collection}/${id}`);
+        const doc = await resp.json();
+        state.editingId = id;
+        if (config.statusOnly) {
+            modalTitle.textContent = `Cambiar estado — ${config.labelSingular}`;
+            const estadoActual = doc['Estado'] || '';
+            const estados = ['Pendiente','En tránsito','Completada','Entregado','Cancelada'];
+            modalBody.innerHTML = `<div class="modal-form-group">
+                <label>Estado actual</label>
+                <select class="form-select" id="field-Estado">${estados.map(e => `<option value="${e}" ${estadoActual === e ? 'selected' : ''}>${e}</option>`).join('')}</select>
+            </div>`;
+        } else {
+            modalTitle.textContent = `Editar ${config.labelSingular}`;
+            modalBody.innerHTML = buildForm(doc);
+            // Inicializar insumos existentes
+            if (config.hasInsumos) {
+                insumoCounter = 0;
+                for (let i = 1; i <= 6; i++) {
+                    const nom = doc['Insumo' + i + '_Nombre'] || '';
+                    if (nom.trim()) {
+                        agregarFilaInsumo(nom, doc['Insumo' + i + '_Cantidad'] || '');
+                    }
+                }
+                document.getElementById('btn-agregar-insumo').onclick = () => agregarFilaInsumo();
+            }
+        }
+        btnDelete.style.display = config.statusOnly ? 'none' : 'inline-block';
+        btnSave.textContent = 'Actualizar';
+        btnSave.className = 'btn btn-warning';
+        modal.show();
+    }
+
+    function openCreate() {
+        state.editingId = null;
+        modalTitle.textContent = `Nuevo ${config.labelSingular}`;
+        modalBody.innerHTML = buildForm({});
+        // Insumos: sin filas pre-cargadas (solo el botón)
+        if (config.hasInsumos) {
+            insumoCounter = 0;
+            document.getElementById('btn-agregar-insumo').onclick = () => agregarFilaInsumo();
+        }
+        btnDelete.style.display = 'none';
+        btnSave.textContent = 'Crear';
+        btnSave.className = 'btn btn-success';
+        modal.show();
+    }
+
+    async function saveDoc() {
+        const data = {};
+        if (config.statusOnly) {
+            // Solo guardar Estado
+            data['Estado'] = document.getElementById('field-Estado').value;
+        } else {
+            config.formFields.forEach(f => {
+                const el = document.getElementById('field-' + f.key);
+                if (!el) return;
+                let val = el.value;
+                if (f.type === 'number') val = parseFloat(val) || 0;
+                data[f.key] = val;
+            });
+
+            // Guardar insumos dinámicos si aplica
+            if (config.hasInsumos) {
+                const rows = document.querySelectorAll('#producto-insumos-rows .insumo-row');
+                let idx = 1;
+                rows.forEach(row => {
+                    const nomEl = row.querySelector('.insumo-nombre');
+                    const cantEl = row.querySelector('.insumo-cantidad');
+                    if (nomEl && nomEl.value.trim()) {
+                        data['Insumo' + idx + '_Nombre'] = nomEl.value.trim();
+                        data['Insumo' + idx + '_Cantidad'] = cantEl ? (parseFloat(cantEl.value) || 0) : 0;
+                        idx++;
+                    }
+                });
+            }
+        }
+
+        // Convertir date fields
+        if (config.dateFields) {
+            config.dateFields.forEach(df => {
+                if (data[df] && typeof data[df] === 'string' && data[df].length === 10) {
+                    data[df] = data[df] + 'T00:00:00';
+                }
+            });
+        }
+
+        let resp;
+        if (state.editingId) {
+            resp = await fetch(`/api/crud/${config.collection}/${state.editingId}`, {
+                method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)
+            });
+        } else {
+            resp = await fetch(`/api/crud/${config.collection}`, {
+                method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)
+            });
+        }
+
+        if (resp.ok) {
+            modal.hide();
+            loadData();
+            showAlert(`${config.labelSingular} guardado correctamente.`, 'success');
+        } else {
+            const err = await resp.json();
+            showAlert(err.error || 'No se pudo guardar');
+        }
+    }
+
+    async function confirmDelete(id) {
+        const ok = await showConfirm(`¿Eliminar este ${config.labelSingular.toLowerCase()}? Esta acción no se puede deshacer.`);
+        if (!ok) return;
+        const resp = await fetch(`/api/crud/${config.collection}/${id}`, { method: 'DELETE' });
+        if (resp.ok) {
+            loadData();
+            showAlert(`${config.labelSingular} eliminado.`, 'success');
+        } else {
+            const err = await resp.json();
+            showAlert(err.error || 'No se pudo eliminar');
+        }
+    }
+
+    // Header con botón Nuevo (solo si no es readOnly)
+    const headerDiv = container.querySelector('.crud-header');
+    if (!config.readOnly) {
+        const btnNew = document.createElement('button');
+        btnNew.className = 'btn btn-primary';
+        btnNew.innerHTML = '<i class="bi bi-plus-lg"></i> Nuevo';
+        btnNew.style.cssText = 'background:var(--primary);border:none;padding:8px 20px;border-radius:8px;font-weight:600;';
+        btnNew.onclick = openCreate;
+        headerDiv.appendChild(btnNew);
+    }
+
+    // Eventos
+    btnSave.onclick = saveDoc;
+    btnDelete.onclick = () => { modal.hide(); confirmDelete(state.editingId); };
+    let searchTimeout;
+    searchInput.oninput = () => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => { state.search = searchInput.value; state.page = 1; loadData(); }, 300);
+    };
+
+    // Load inicial
+    await loadData();
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// EJECUTAR PREDICCIONES (pipeline simplificado sin Excel)
+// ═══════════════════════════════════════════════════════════
+let pipelineActivo = false;
+let intervaloProgreso = null;
+
+function ejecutarPredicciones() {
+    if (pipelineActivo) {
+        showAlert('Ya hay una ejecución en curso. Espera a que termine.', 'warning');
+        return;
+    }
+    pipelineActivo = true;
+    document.getElementById('btn-ejecutar').disabled = true;
+    document.getElementById('btn-ejecutar').textContent = '⏳ Ejecutando...';
+    document.getElementById('card-progreso').style.display = 'block';
+    document.getElementById('card-finalizado').style.display = 'none';
+    document.getElementById('card-error').style.display = 'none';
+
+    fetch('/api/ejecutar-predicciones', { method: 'POST' })
+        .then(r => r.json())
+        .then(d => {
+            if (d.error) { mostrarError(d.error); return; }
+            intervaloProgreso = setInterval(consultarProgreso, 800);
+        })
+        .catch(err => { mostrarError('Error al iniciar: ' + err.message); });
+}
+
+function consultarProgreso() {
+    fetch('/api/progreso')
+        .then(r => r.json())
+        .then(d => {
+            const barra = document.getElementById('barra-progreso');
+            barra.style.width = d.percent + '%';
+            barra.textContent = d.percent > 5 ? d.percent + '%' : '';
+            document.getElementById('texto-paso').textContent = d.step;
+            const icono = document.getElementById('icono-paso');
+            if (d.error) {
+                icono.className = 'bi bi-exclamation-triangle-fill';
+                icono.style.color = 'var(--danger)';
+            } else if (!d.running && d.percent >= 100) {
+                icono.className = 'bi bi-check-circle-fill';
+                icono.style.color = 'var(--success)';
+            } else if (d.running) {
+                icono.className = 'bi bi-hourglass-split';
+                icono.style.color = 'var(--info)';
+            }
+            if (d.error) {
+                clearInterval(intervaloProgreso); pipelineActivo = false;
+                mostrarError(d.error); return;
+            }
+            if (!d.running && d.percent >= 100) {
+                clearInterval(intervaloProgreso); pipelineActivo = false;
+                document.getElementById('card-finalizado').style.display = 'block';
+                document.getElementById('btn-ejecutar').textContent = '✅ Completado';
+                document.getElementById('btn-ejecutar').style.background = 'var(--success)';
+                loaded = {}; tabsLoaded = {};
+            }
+        })
+        .catch(err => {
+            clearInterval(intervaloProgreso); pipelineActivo = false;
+            mostrarError('Error de conexión: ' + err.message);
+        });
+}
+
+function mostrarError(mensaje) {
+    document.getElementById('card-error').style.display = 'block';
+    document.getElementById('texto-error').textContent = mensaje;
+    document.getElementById('btn-ejecutar').textContent = 'Intentar de nuevo';
+    document.getElementById('btn-ejecutar').disabled = false;
+    document.getElementById('btn-ejecutar').style.background = 'var(--danger)';
+    pipelineActivo = false;
+    if (intervaloProgreso) clearInterval(intervaloProgreso);
+}
+
+
+// Cargar dashboard al iniciar
+loadDashboard();
+loaded['dashboard'] = true;
+</script>
+</body>
+</html>

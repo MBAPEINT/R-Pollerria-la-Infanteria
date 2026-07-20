@@ -1,0 +1,3 @@
+1. Abrir CMD dentro de la carpeta backup
+2. Ingresar el siguiente comando:
+mongorestore --archive=backup.archive --gzip

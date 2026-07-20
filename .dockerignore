@@ -1,0 +1,53 @@
+# Git
+.git/
+.gitignore
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.env
+
+# R
+.Rproj.user/
+.Rhistory
+.RData
+.Ruserdata
+*.Rproj
+
+# Logs (pero mantener la carpeta)
+logs/*.log
+
+# Archivos temporales
+*.tmp
+*.bak
+.DS_Store
+Thumbs.db
+
+# Backup de Excel (se generan automáticamente)
+data/raw/*_backup_*.xlsx
+
+# Backup (pesado, no necesario en la imagen)
+backup/
+
+# Credenciales (NUNCA en la imagen)
+atlas-credentials.env
+*.env
+
+# Entrypoint local (en Render usamos entrypoint-render.sh)
+entrypoint.sh
+
+# Dockerfile de desarrollo
+Dockerfile
+
+# Scripts de automatización de Windows (no aplican en Docker)
+auto_actualizar.bat
+actualizar_ahora.bat
+programar_tarea.ps1
+temp_*.R

@@ -1,0 +1,1 @@
+{"indexes":[{"v":{"$numberInt":"2"},"key":{"_id":{"$numberInt":"1"}},"name":"_id_"}],"uuid":"870ac269e2144dd69d252ef6ecbd3153","collectionName":"Detalle_Insumo","type":"collection"}

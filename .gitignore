@@ -1,0 +1,30 @@
+# Datos generados (pesados, regenerables)
+data/processed/
+data/output/
+
+# Archivos de salida generados
+outputs/
+
+# Archivos temporales
+temp/
+*.pdf
+
+# Ambiente Python
+webapp/__pycache__/
+webapp/venv/
+*.pyc
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Credenciales (NO SUBIR)
+atlas-credentials.env
+*.env
+
+# R
+.Rhistory
+.RData
+.Ruserdata
+.Rproj.user/

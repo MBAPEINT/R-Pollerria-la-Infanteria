@@ -1,0 +1,46 @@
+# ============================================================
+# Pollería la Infantería — Docker Compose
+# ============================================================
+services:
+
+  # ─── MongoDB ───
+  mongodb:
+    image: mongo:7
+    container_name: polleria-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── Webapp + R Pipeline ───
+  app:
+    build: .
+    container_name: polleria-app
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - MONGO_URL=mongodb://mongodb:27017
+      - R_SCRIPT_PATH=/usr/bin/Rscript
+      - FLASK_DEBUG=false
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    volumes:
+      # Datos — persisten en tu máquina
+      - ./data:/app/data
+
+volumes:
+  mongo-data:
+
+# ─── Instrucciones ───
+#   Levantar:  docker compose up -d
+#   Ver logs:  docker compose logs -f app
+#   Apagar:    docker compose down
+#   Reconstruir: docker compose build --no-cache
