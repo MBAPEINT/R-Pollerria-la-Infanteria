@@ -837,7 +837,9 @@ def api_progreso():
 
 
 def _ejecutar_pipeline():
-    """Ejecuta 8 scripts: 4 ML + 4 proyectos. Todos leen de MongoDB."""
+    """Ejecuta 8 scripts: 4 ML + 4 proyectos. Todos leen de MongoDB.
+    Si un script falla, continúa con el siguiente. Al final muestra
+    cuáles fallaron y cuáles no."""
     global pipeline_status
 
     scripts = [
@@ -852,16 +854,20 @@ def _ejecutar_pipeline():
         ("src/proyectos/07_deteccion_anomalias.R", "Proyecto 4/4: Detección anomalías", (93, 100)),
     ]
 
-    try:
-        for i, (script, nombre, (pct_inicio, pct_fin)) in enumerate(scripts):
-            with pipeline_lock:
-                pipeline_status["step"] = f"Paso {i+1}/8: {nombre}"
-                pipeline_status["percent"] = pct_inicio
+    fallidos = []
+    exitosos = []
 
-            script_path = os.path.join(PROJECT, script)
-            if not os.path.exists(script_path):
-                raise FileNotFoundError(f"No se encontró: {script_path}")
+    for i, (script, nombre, (pct_inicio, pct_fin)) in enumerate(scripts):
+        with pipeline_lock:
+            pipeline_status["step"] = f"Paso {i+1}/8: {nombre}"
+            pipeline_status["percent"] = pct_inicio
 
+        script_path = os.path.join(PROJECT, script)
+        if not os.path.exists(script_path):
+            fallidos.append(f"{script}: archivo no encontrado")
+            continue
+
+        try:
             result = subprocess.run(
                 [RSCRIPT, script_path],
                 cwd=PROJECT,
@@ -871,23 +877,37 @@ def _ejecutar_pipeline():
             )
 
             if result.returncode != 0:
-                error_msg = result.stderr.strip().split("\n")[-1] if result.stderr else f"Código de salida: {result.returncode}"
-                raise RuntimeError(f"Error en {script}: {error_msg}")
+                # Extraer últimas líneas del error para diagnóstico
+                stderr_tail = result.stderr.strip().split("\n")[-5:] if result.stderr else []
+                error_detalle = " | ".join(stderr_tail) if stderr_tail else f"código {result.returncode}"
+                fallidos.append(f"{script}: {error_detalle}")
+            else:
+                exitosos.append(script)
+                with pipeline_lock:
+                    pipeline_status["percent"] = pct_fin
 
-            with pipeline_lock:
-                pipeline_status["percent"] = pct_fin
+        except subprocess.TimeoutExpired:
+            fallidos.append(f"{script}: timeout (10 min)")
+        except Exception as e:
+            fallidos.append(f"{script}: {str(e)[:200]}")
 
-        # Éxito
-        with pipeline_lock:
-            pipeline_status["step"] = "¡Predicciones actualizadas! Todos los reportes están listos."
+    # Resultado final
+    n_ok = len(exitosos)
+    n_fail = len(fallidos)
+
+    with pipeline_lock:
+        if n_fail == 0:
+            pipeline_status["step"] = f"¡Listo! {n_ok}/8 scripts ejecutados correctamente."
             pipeline_status["percent"] = 100
-            pipeline_status["running"] = False
-
-    except Exception as e:
-        with pipeline_lock:
-            pipeline_status["error"] = str(e)[:500]
-            pipeline_status["step"] = f"Error: {str(e)[:200]}"
-            pipeline_status["running"] = False
+        elif n_ok == 0:
+            pipeline_status["step"] = f"Error: 0/8 scripts funcionaron."
+            pipeline_status["error"] = "Fallos: " + "; ".join(fallidos)[:500]
+            pipeline_status["percent"] = 0
+        else:
+            pipeline_status["step"] = f"Terminado: {n_ok}/8 OK, {n_fail} fallaron."
+            pipeline_status["error"] = "Fallos: " + "; ".join(fallidos)[:500]
+            pipeline_status["percent"] = 100
+        pipeline_status["running"] = False
 
 
 if __name__ == "__main__":
