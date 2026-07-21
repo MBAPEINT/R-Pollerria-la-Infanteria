@@ -15,11 +15,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # ─── Instalar R + Prophet + todos los paquetes vía conda (pre-compilado) ───
 RUN conda install -y -c conda-forge \
     r-base=4.4 \
-    r-dplyr r-readxl r-ggplot2 r-lubridate r-jsonlite \
+    r-dplyr r-tidyr r-readxl r-ggplot2 r-lubridate r-jsonlite r-scales \
     r-randomforest r-gridextra r-curl r-openssl \
     r-prophet r-mongolite r-arules \
+    r-forecast r-xgboost r-cluster r-dbscan r-mclust r-glmnet r-e1071 \
     flask pymongo \
     && conda clean -afy
+
+# ─── Paquete solitude (no está en conda, instalar desde CRAN) ───
+RUN R -e "install.packages('solitude', repos='https://cloud.r-project.org', Ncpus=1)"
 
 # ─── Rscript en la ruta esperada por el pipeline ───
 RUN ln -s /opt/conda/bin/Rscript /usr/bin/Rscript

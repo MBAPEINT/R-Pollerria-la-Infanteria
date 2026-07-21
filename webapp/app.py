@@ -844,14 +844,20 @@ def _ejecutar_pipeline():
 
     scripts = [
         # (ruta, nombre_visible, rango_porcentaje)
-        ("src/ml/01_ventas_semanales.R", "ML 1/4: Ventas semanales (Prophet)", (0, 25)),
-        ("src/ml/02_agotamiento_insumos.R", "ML 2/4: Agotamiento insumos (Random Forest)", (25, 50)),
-        ("src/ml/04_combos_productos.R", "ML 3/4: Combos productos (Apriori)", (50, 62)),
-        ("src/ml/06_cantidad_productos.R", "ML 4/4: Unidades por producto (Random Forest)", (62, 75)),
-        ("src/proyectos/01_dashboard_ejecutivo.R", "Proyecto 1/4: Dashboard ejecutivo", (75, 81)),
-        ("src/proyectos/02_alerta_stock.R", "Proyecto 2/4: Alerta de stock", (81, 87)),
-        ("src/proyectos/04_segmentacion_clientes.R", "Proyecto 3/4: Segmentación clientes", (87, 93)),
-        ("src/proyectos/07_deteccion_anomalias.R", "Proyecto 4/4: Detección anomalías", (93, 100)),
+        ("src/ml/01_ventas_semanales.R", "ML 1/4: Ventas semanales (Prophet)", (0, 15)),
+        ("src/ml/02_agotamiento_insumos.R", "ML 2/4: Agotamiento insumos (Random Forest)", (15, 30)),
+        ("src/ml/04_combos_productos.R", "ML 3/4: Combos productos (Apriori)", (30, 40)),
+        ("src/ml/06_cantidad_productos.R", "ML 4/4: Unidades por producto (Random Forest)", (40, 50)),
+        ("src/proyectos/01_dashboard_ejecutivo.R", "Proyecto 1/4: Dashboard ejecutivo", (50, 55)),
+        ("src/proyectos/02_alerta_stock.R", "Proyecto 2/4: Alerta de stock", (55, 60)),
+        ("src/proyectos/04_segmentacion_clientes.R", "Proyecto 3/4: Segmentación clientes", (60, 65)),
+        ("src/proyectos/07_deteccion_anomalias.R", "Proyecto 4/4: Detección anomalías", (65, 70)),
+        ("src/ml/comparacion/01_comparar_ventas.R", "Comp 1/6: Ventas (Prophet vs ARIMA vs XGBoost)", (70, 75)),
+        ("src/ml/comparacion/02_comparar_segmentacion.R", "Comp 2/6: Segmentación (K-Means vs DBSCAN vs GMM)", (75, 80)),
+        ("src/ml/comparacion/03_comparar_combos.R", "Comp 3/6: Combos (Apriori vs FP-Growth vs Eclat)", (80, 85)),
+        ("src/ml/comparacion/04_comparar_agotamiento.R", "Comp 4/6: Agotamiento (RF vs XGBoost vs RegLog)", (85, 90)),
+        ("src/ml/comparacion/05_comparar_anomalias.R", "Comp 5/6: Anomalías (IsolationForest vs LOF vs SVM)", (90, 95)),
+        ("src/ml/comparacion/06_tabla_resumen.R", "Comp 6/6: Tabla resumen de ganadores", (95, 100)),
     ]
 
     fallidos = []
@@ -859,7 +865,7 @@ def _ejecutar_pipeline():
 
     for i, (script, nombre, (pct_inicio, pct_fin)) in enumerate(scripts):
         with pipeline_lock:
-            pipeline_status["step"] = f"Paso {i+1}/8: {nombre}"
+            pipeline_status["step"] = f"Paso {i+1}/14: {nombre}"
             pipeline_status["percent"] = pct_inicio
 
         script_path = os.path.join(PROJECT, script)
