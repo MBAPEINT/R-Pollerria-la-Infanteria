@@ -29,10 +29,11 @@ RUN R -e "install.packages(c( \
   ), repos='https://cloud.r-project.org', Ncpus=2)"
 
 # ─── rstan + prophet (compilación pesada, necesita ~15 min) ───
-# Instalamos StanHeaders y rstan antes que prophet
+# v2: Instalamos secuencialmente para evitar fallos de caché en Render
 RUN R -e "install.packages('StanHeaders', repos='https://cloud.r-project.org', Ncpus=2)" \
   && R -e "install.packages('rstan', repos='https://cloud.r-project.org', Ncpus=2)" \
-  && R -e "install.packages(c('prophet', 'dygraphs', 'htmlwidgets', 'rmarkdown'), \
+  && R -e "install.packages('prophet', repos='https://cloud.r-project.org', Ncpus=2)" \
+  && R -e "install.packages(c('dygraphs', 'htmlwidgets', 'rmarkdown'), \
        repos='https://cloud.r-project.org', Ncpus=2)"
 
 # ─── Copiar proyecto ───
