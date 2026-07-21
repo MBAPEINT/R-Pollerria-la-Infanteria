@@ -25,6 +25,9 @@ RUN conda install -y -c conda-forge \
 RUN R -e "install.packages(c('mongolite', 'arules'), \
     repos='https://cloud.r-project.org', Ncpus=1)"
 
+# ─── Rscript en la ruta esperada por el pipeline ───
+RUN ln -s /opt/conda/bin/Rscript /usr/bin/Rscript
+
 # ─── Copiar proyecto ───
 WORKDIR /app
 COPY . .
